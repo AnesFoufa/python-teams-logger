@@ -6,7 +6,7 @@ from teams_logger import __version__, TeamsHandler
 
 class TestVersion(unittest.TestCase):
     def test(self):
-        self.assertEqual('0.1.0', __version__)
+        self.assertEqual('0.1.3', __version__)
 
 
 class TestTeamsHandler(unittest.TestCase):
