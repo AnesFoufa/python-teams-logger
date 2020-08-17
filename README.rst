@@ -9,8 +9,8 @@ Installation
 
     pip install teams-logger
 
-Example
--------
+Examples
+--------
 Simple
 ''''''
 .. code-block:: python
@@ -19,22 +19,26 @@ Simple
   from teams_handler import TeamsHandler
 
   th = TeamsHandler(url='YOUR_WEB_HOOK_URL', level=logging.INFO)
-  logging.basicConfig(handlers=[sh])
+  logging.basicConfig(handlers=[th])
   logging.warning('warn message')
 
-Using logger
-''''''''''''
+
+Using Card Formatter
+''''''''''''''''''''
 .. code-block:: python
 
   import logging
-  from teams_handler import TeamsHandler
+  from teams_handler import TeamsHandler, Office365CardFormatter
 
   logger = logging.getLogger(__name__)
   logger.setLevel(logging.DEBUG)
 
   th = TeamsHandler(url='YOUR_WEB_HOOK_URL', level=logging.INFO)
-  sh.setLevel(logging.DEBUG)
+  th.setLevel(logging.DEBUG)
+  logger.addHandler(th)
 
+  cf = Office365CardFormatter(facts=["name", "levelane", "lineno"])
+  th.setFormatter(cf)
   logger.debug('debug message')
   logger.info('info message')
   logger.warn('warn message')
