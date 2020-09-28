@@ -1,5 +1,5 @@
 import json
-from logging import Handler, LogRecord
+from logging import Handler, LogRecord, NOTSET
 from typing import Iterable
 
 import requests
@@ -20,7 +20,7 @@ class TeamsHandler(Handler):
     """
     Logging handler for Microsoft Teams webhook integration.
     """
-    def __init__(self, url, level):
+    def __init__(self, url, level=NOTSET):
         """
         :param url: Microsoft Teams incoming webhook url.
         :param level: Logging level (INFO, DEBUG, ERROR...etc)

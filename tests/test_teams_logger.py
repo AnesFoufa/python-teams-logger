@@ -1,6 +1,7 @@
 import json
 import unittest.mock
-from logging import Handler, INFO, getLogger, LogRecord
+from logging import Handler, INFO, WARNING, getLogger, LogRecord
+from logging.config import dictConfig
 
 from teams_logger import TeamsHandler, Office365CardFormatter
 
@@ -100,6 +101,69 @@ class TestTeamsHandler(unittest.TestCase):
         self.logger.log(self.log_level, self.log_text, self.log_parameter)
         mock_requests.assert_called_with(url=self.url, headers={"Content-Type": "application/json"},
                                          data=self.fake_message_card)
+
+    def test_dict(self):
+        """ Test initializing logger from dict """
+
+        LOGGING = {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'handlers': {
+                'msteams': {
+                    'level': WARNING,
+                    'class': 'teams_logger.TeamsHandler',
+                    'url': self.url,
+                },
+            },
+            'loggers': {
+                __name__: {
+                    'handlers': ['msteams'],
+                    'level': self.level,
+                }
+            },
+        }
+        dictConfig(LOGGING)
+        self.logger = getLogger(__name__)
+
+        self.assertEqual(1, len(self.logger.handlers))
+        handler = self.logger.handlers[0]
+        self.assertEqual(self.url, handler.url)
+        self.assertEqual(WARNING, handler.level)
+
+    @unittest.mock.patch("requests.post")
+    def test_dict_level_handling(self, mock_requests):
+        """ Test correctly handling logging levels when initalized from dict """
+        LOGGING = {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'handlers': {
+                'msteams': {
+                    'level': WARNING,
+                    'class': 'teams_logger.TeamsHandler',
+                    'url': self.url,
+                },
+            },
+            'loggers': {
+                __name__: {
+                    'handlers': ['msteams'],
+                    'level': self.level,
+                }
+            },
+        }
+        dictConfig(LOGGING)
+        self.logger = getLogger(__name__)
+
+        # Logging to same level (WARNING) should be handled
+        self.logger.log(WARNING, self.log_text, self.log_parameter)
+        mock_requests.assert_called_with(url=self.url,
+                                         headers={
+                                             "Content-Type": "application/json"},
+                                         data=self.expected_payload_with_default_formatter)
+
+        # Logging to lower level (INFO) should *not* be handled
+        mock_requests.reset_mock()
+        self.logger.log(INFO, self.log_text, self.log_parameter)
+        mock_requests.assert_not_called()
 
 
 if __name__ == '__main__':
