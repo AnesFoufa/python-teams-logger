@@ -1,11 +1,12 @@
 import io
 import json
 import sys
+import time
 import unittest.mock
-from logging import Handler, INFO, WARNING, getLogger, LogRecord
+from logging import Handler, INFO, WARNING, getLogger, LogRecord, shutdown
 from logging.config import dictConfig
 
-from teams_logger import TeamsHandler, Office365CardFormatter
+from teams_logger import TeamsHandler, NBTeamsHandler, Office365CardFormatter
 
 
 class TestOffice365CardFormatter(unittest.TestCase):
@@ -161,6 +162,49 @@ class TestTeamsHandler(unittest.TestCase):
         mock_requests.reset_mock()
         self.logger.log(INFO, self.log_text, self.log_parameter)
         mock_requests.assert_not_called()
+
+
+class TestNBTeamsHandler(unittest.TestCase):
+    pass
+    url = 'https://outlook.office.com/webhook/fake_id/IncomingWebhook/fake_id'
+    level = INFO
+    log_text = "bla bla %s"
+    log_parameter = "foo"
+    log_level = INFO
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        log_message = cls.log_text % cls.log_parameter
+        cls.expected_payload_with_default_formatter = json.dumps({
+            "text": log_message
+        })
+
+    def setUp(self) -> None:
+        self.handler = NBTeamsHandler(url=self.url)
+        self.handler.setLevel(self.level)
+        self.handler.formatter = None
+        self.logger = getLogger(__name__)
+        self.logger.setLevel(self.level)
+        self.logger.handlers = [self.handler]
+
+    def tearDown(self) -> None:
+        # Clean up logging resources, to avoid deadlock at
+        # acquiring lock in other tests
+        shutdown()
+
+    def test_is_handler(self):
+        assert issubclass(NBTeamsHandler, Handler)
+
+    @unittest.mock.patch("requests.post")
+    def test_emit_with_default_formatter(self, mock_requests):
+        mock_requests.reset_mock()
+        self.logger.log(self.log_level, self.log_text, self.log_parameter)
+        # Call to Teams is handled in separate thread,
+        # so wait until we have a signal it's processed
+        while not self.logger.handlers[0].log_queue.empty():
+            time.sleep(0.1)
+        mock_requests.assert_called_with(url=self.url, headers={"Content-Type": "application/json"},
+                                         data=self.expected_payload_with_default_formatter)
 
 
 if __name__ == '__main__':
