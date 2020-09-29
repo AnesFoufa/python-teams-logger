@@ -81,6 +81,24 @@ class TestTeamsHandler(unittest.TestCase):
         self.logger.setLevel(self.level)
         self.logger.handlers = [self.teams_handler]
 
+        self.logging_dict = {
+            'version': 1,
+            'disable_existing_loggers': False,
+            'handlers': {
+                'msteams': {
+                    'level': WARNING,
+                    'class': 'teams_logger.TeamsHandler',
+                    'url': self.url,
+                },
+            },
+            'loggers': {
+                __name__: {
+                    'handlers': ['msteams'],
+                    'level': self.level,
+                }
+            },
+        }
+
     def test_is_handler(self):
         assert issubclass(TeamsHandler, Handler)
 
@@ -104,7 +122,8 @@ class TestTeamsHandler(unittest.TestCase):
         except:
             self.fail(
                 "An exception was raised; it should have been suppressed by the logging handler")
-        sys.stderr = sys.__stderr__ # restore stderr
+        finally:
+            sys.stderr = sys.__stderr__  # restore stderr
 
     @unittest.mock.patch("requests.post")
     def test_emit_with_teams_message_card_formatter(self, mock_requests):
@@ -116,52 +135,19 @@ class TestTeamsHandler(unittest.TestCase):
                                          data=self.fake_message_card)
 
     def test_initializing_logger_from_dict(self):
-        logging_dict = {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'handlers': {
-                'msteams': {
-                    'level': WARNING,
-                    'class': 'teams_logger.TeamsHandler',
-                    'url': self.url,
-                },
-            },
-            'loggers': {
-                __name__: {
-                    'handlers': ['msteams'],
-                    'level': self.level,
-                }
-            },
-        }
-        dictConfig(logging_dict)
+        dictConfig(self.logging_dict)
         self.logger = getLogger(__name__)
 
         self.assertEqual(1, len(self.logger.handlers))
         handler = self.logger.handlers[0]
+        self.assertIsInstance(handler, TeamsHandler)
         self.assertEqual(self.url, handler.url)
         self.assertEqual(WARNING, handler.level)
 
     @unittest.mock.patch("requests.post")
     def test_dict_level_handling(self, mock_requests):
         """ Test correctly handling logging levels when initalized from dict """
-        LOGGING = {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'handlers': {
-                'msteams': {
-                    'level': WARNING,
-                    'class': 'teams_logger.TeamsHandler',
-                    'url': self.url,
-                },
-            },
-            'loggers': {
-                __name__: {
-                    'handlers': ['msteams'],
-                    'level': self.level,
-                }
-            },
-        }
-        dictConfig(LOGGING)
+        dictConfig(self.logging_dict)
         self.logger = getLogger(__name__)
 
         # Logging to same level (WARNING) should be handled
