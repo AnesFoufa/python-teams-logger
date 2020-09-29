@@ -115,10 +115,8 @@ class TestTeamsHandler(unittest.TestCase):
         mock_requests.assert_called_with(url=self.url, headers={"Content-Type": "application/json"},
                                          data=self.fake_message_card)
 
-    def test_dict(self):
-        """ Test initializing logger from dict """
-
-        LOGGING = {
+    def test_initializing_logger_from_dict(self):
+        logging_dict = {
             'version': 1,
             'disable_existing_loggers': False,
             'handlers': {
@@ -135,7 +133,7 @@ class TestTeamsHandler(unittest.TestCase):
                 }
             },
         }
-        dictConfig(LOGGING)
+        dictConfig(logging_dict)
         self.logger = getLogger(__name__)
 
         self.assertEqual(1, len(self.logger.handlers))
