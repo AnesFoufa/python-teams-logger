@@ -35,8 +35,13 @@ class TeamsHandler(Handler):
             return self.formatter.format(record)
 
     def emit(self, record: LogRecord):
-        data = self.format(record)
-        requests.post(url=self.url, headers={"Content-Type": "application/json"}, data=data)
+        try:
+            data = self.format(record)
+            requests.post(url=self.url,
+                          headers={"Content-Type": "application/json"},
+                          data=data)
+        except Exception:
+            self.handleError(record)
 
 
 class Office365CardFormatter(TeamsCardsFormatter):

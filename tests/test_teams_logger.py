@@ -1,4 +1,6 @@
+import io
 import json
+import sys
 import unittest.mock
 from logging import Handler, INFO, WARNING, getLogger, LogRecord
 from logging.config import dictConfig
@@ -92,6 +94,17 @@ class TestTeamsHandler(unittest.TestCase):
         self.logger.log(self.log_level, self.log_text, self.log_parameter)
         mock_requests.assert_called_with(url=self.url, headers={"Content-Type": "application/json"},
                                          data=self.expected_payload_with_default_formatter)
+
+    @unittest.mock.patch("requests.post")
+    def test_emit_exception(self, mock_requests):
+        mock_requests.side_effect = Exception()
+        sys.stderr = io.StringIO()  # disable output of handleError operation
+        try:
+            self.logger.log(self.log_level, self.log_text, self.log_parameter)
+        except:
+            self.fail(
+                "An exception was raised; it should have been suppressed by the logging handler")
+        sys.stderr = sys.__stderr__ # restore stderr
 
     @unittest.mock.patch("requests.post")
     def test_emit_with_teams_message_card_formatter(self, mock_requests):
