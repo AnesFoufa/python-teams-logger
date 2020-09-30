@@ -37,7 +37,7 @@ Using Card Formatter
   th.setLevel(logging.DEBUG)
   logger.addHandler(th)
 
-  cf = Office365CardFormatter(facts=["name", "levelane", "lineno"])
+  cf = Office365CardFormatter(facts=["name", "levelname", "lineno"])
   th.setFormatter(cf)
   logger.debug('debug message')
   logger.info('info message')
