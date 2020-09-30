@@ -201,8 +201,12 @@ class TestNBTeamsHandler(unittest.TestCase):
         self.logger.log(self.log_level, self.log_text, self.log_parameter)
         # Call to Teams is handled in separate thread,
         # so wait until we have a signal it's processed
-        while not self.logger.handlers[0].log_queue.empty():
+        count = 0
+        while not self.logger.handlers[0]._log_queue.empty():
             time.sleep(0.1)
+            count += 1
+            if count >= 10:
+                self.fail("Log queue not processed in reasonable time")
         mock_requests.assert_called_with(url=self.url, headers={"Content-Type": "application/json"},
                                          data=self.expected_payload_with_default_formatter)
 

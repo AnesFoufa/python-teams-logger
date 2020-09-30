@@ -62,11 +62,11 @@ class NBTeamsHandler(QueueHandler):
     """
 
     def __init__(self, url):
-        self.log_queue = queue.Queue(-1)
-        super().__init__(self.log_queue)
+        self._log_queue = queue.Queue(-1)
+        super().__init__(self._log_queue)
 
         teams_handler = TeamsHandler(url)
-        teams_log_listener = QueueListener(self.log_queue, teams_handler)
+        teams_log_listener = QueueListener(self._log_queue, teams_handler)
         teams_log_listener.start()
 
 
