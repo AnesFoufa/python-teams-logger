@@ -1,5 +1,5 @@
 import json
-from logging import Handler, LogRecord, NOTSET
+from logging import Handler, LogRecord, NOTSET, Formatter
 from typing import Iterable
 
 import requests
@@ -7,7 +7,7 @@ import requests
 __all__ = ["TeamsHandler", "Office365CardFormatter", "TeamsCardsFormatter"]
 
 
-class TeamsCardsFormatter:
+class TeamsCardsFormatter(Formatter):
     """
     This class is the base class for cards formatters.
     https://docs.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/what-are-cards
