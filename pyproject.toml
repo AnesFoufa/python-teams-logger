@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "teams-logger"
-version = "0.2.1"
+version = "0.3.0"
 description = "Microsoft Teams logging handler for Python"
 authors = ["Anes Foufa <anes.foufa@upply.com>"]
 readme = "README.rst"

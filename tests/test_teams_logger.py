@@ -6,7 +6,7 @@ import unittest.mock
 from logging import Handler, INFO, WARNING, getLogger, LogRecord, shutdown
 from logging.config import dictConfig
 
-from teams_logger import TeamsHandler, NBTeamsHandler, Office365CardFormatter
+from teams_logger import TeamsHandler, TeamsQueueHandler, Office365CardFormatter
 
 
 class TestOffice365CardFormatter(unittest.TestCase):
@@ -27,7 +27,8 @@ class TestOffice365CardFormatter(unittest.TestCase):
             "sections": [{
                 "facts": cls.expected_facts_in_message_card
             }],
-            "text": cls.expected_text_in_message_card
+            "text": cls.expected_text_in_message_card,
+            "themeColor": "#008000"
         }
         cls.formatter = Office365CardFormatter(facts=cls.facts_parameter)
 
@@ -116,11 +117,11 @@ class TestTeamsHandler(unittest.TestCase):
 
     @unittest.mock.patch("requests.post")
     def test_emit_exception(self, mock_requests):
-        mock_requests.side_effect = Exception()
+        mock_requests.side_effect = ValueError()
         sys.stderr = io.StringIO()  # disable output of handleError operation
         try:
             self.logger.log(self.log_level, self.log_text, self.log_parameter)
-        except:
+        except ValueError:
             self.fail(
                 "An exception was raised; it should have been suppressed by the logging handler")
         finally:
@@ -147,7 +148,7 @@ class TestTeamsHandler(unittest.TestCase):
 
     @unittest.mock.patch("requests.post")
     def test_dict_level_handling(self, mock_requests):
-        """ Test correctly handling logging levels when initalized from dict """
+        """ Test correctly handling logging levels when initialized from dict """
         dictConfig(self.logging_dict)
         self.logger = getLogger(__name__)
 
@@ -164,8 +165,7 @@ class TestTeamsHandler(unittest.TestCase):
         mock_requests.assert_not_called()
 
 
-class TestNBTeamsHandler(unittest.TestCase):
-    pass
+class TestTeamsQueueHandler(unittest.TestCase):
     url = 'https://outlook.office.com/webhook/fake_id/IncomingWebhook/fake_id'
     level = INFO
     log_text = "bla bla %s"
@@ -180,7 +180,7 @@ class TestNBTeamsHandler(unittest.TestCase):
         })
 
     def setUp(self) -> None:
-        self.handler = NBTeamsHandler(url=self.url)
+        self.handler = TeamsQueueHandler(url=self.url)
         self.handler.setLevel(self.level)
         self.handler.formatter = None
         self.logger = getLogger(__name__)
@@ -193,7 +193,7 @@ class TestNBTeamsHandler(unittest.TestCase):
         shutdown()
 
     def test_is_handler(self):
-        assert issubclass(NBTeamsHandler, Handler)
+        assert issubclass(TeamsQueueHandler, Handler)
 
     @unittest.mock.patch("requests.post")
     def test_emit_with_default_formatter(self, mock_requests):
@@ -202,7 +202,7 @@ class TestNBTeamsHandler(unittest.TestCase):
         # Call to Teams is handled in separate thread,
         # so wait until we have a signal it's processed
         count = 0
-        while not self.logger.handlers[0]._log_queue.empty():
+        while not self.handler._log_queue.empty():
             time.sleep(0.1)
             count += 1
             if count >= 10:

@@ -1,7 +1,7 @@
 teams-logger
 ===================
 
-Python logging handler for Microsoft Teams web hook integration with simple configuration.
+Python logging handler for Microsoft Teams webhook integration with both simple and dictionary configurations.
 
 Installation
 ------------
@@ -11,8 +11,8 @@ Installation
 
 Examples
 --------
-Simple
-''''''
+Simple configuration
+''''''''''''''''''''
 .. code-block:: python
 
   import logging
@@ -22,9 +22,18 @@ Simple
   logging.basicConfig(handlers=[th])
   logging.warning('warn message')
 
+Simple configuration and non blocking handler
+'''''''''''''''''''''''''''''''''''''''''''''
+.. code-block:: python
 
-Using Card Formatter
-''''''''''''''''''''
+  import logging
+  from teams_logger import TeamsQueueHandler
+  th = TeamsQueueHandler(url='YOUR_WEB_HOOK_URL', level=logging.INFO)
+  logging.basicConfig(handlers=[th])
+  logging.info("info message")
+
+Simple configuration and Card Formatter
+'''''''''''''''''''''''''''''''''''''''
 .. code-block:: python
 
   import logging
@@ -47,8 +56,8 @@ Using Card Formatter
 
 
 
-Using dict configuration
-''''''''''''''''''''''''
+Dictionary configuration and Card Formatter
+'''''''''''''''''''''''''''''''''''''''''''
 .. code-block:: python
 
   import logging

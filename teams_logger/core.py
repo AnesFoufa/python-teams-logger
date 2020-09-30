@@ -1,13 +1,13 @@
 import json
-from collections import defaultdict
 import queue
+from collections import defaultdict
 from logging import Handler, LogRecord, NOTSET, Formatter
 from logging.handlers import QueueHandler, QueueListener
 from typing import Iterable
 
 import requests
 
-__all__ = ["TeamsHandler", "NBTeamsHandler",
+__all__ = ["TeamsHandler", "TeamsQueueHandler",
            "Office365CardFormatter", "TeamsCardsFormatter"]
 
 
@@ -51,7 +51,7 @@ class TeamsHandler(Handler):
             self.handleError(record)
 
 
-class NBTeamsHandler(QueueHandler):
+class TeamsQueueHandler(QueueHandler):
     """
     Non-blocking logging handler for Microsoft Teams webhook integration.
 
@@ -62,11 +62,11 @@ class NBTeamsHandler(QueueHandler):
     https://docs.python.org/3/howto/logging-cookbook.html#dealing-with-handlers-that-block
     """
 
-    def __init__(self, url):
+    def __init__(self, url, level=NOTSET):
         self._log_queue = queue.Queue(-1)
         super().__init__(self._log_queue)
 
-        teams_handler = TeamsHandler(url)
+        teams_handler = TeamsHandler(url, level)
         teams_log_listener = QueueListener(self._log_queue, teams_handler)
         teams_log_listener.start()
 
