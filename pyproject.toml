@@ -8,7 +8,7 @@ homepage = "https://github.com/AnesFoufa/python-teams-logger"
 license = "MIT"
 classifiers = ["Topic :: System :: Logging", "Topic :: Communications :: Chat"]
 [tool.poetry.dependencies]
-python = "^3.5"
+python = "^3.6"
 requests = "^2.24.0"
 
 [tool.poetry.dev-dependencies]
