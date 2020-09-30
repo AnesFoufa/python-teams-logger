@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from logging import Handler, LogRecord, NOTSET, Formatter
 from typing import Iterable
 
@@ -52,6 +53,13 @@ class Office365CardFormatter(TeamsCardsFormatter):
     In addition to the message, each log record attribute (levelname, lineno...etc) can be displayed as facts.
     """
     _facts = {"name", "levelname", "levelno", "lineno"}
+    _color_map = defaultdict(lambda: "#008000", {
+        "DEBUG": "#0000FF",  # blue
+        "INFO": "#008000",    # green
+        "WARNING": "#FFA500",  # orange
+        "ERROR": "#FF0000",   # red
+        "CRITICAL": "#8B0000",  # darkred
+     })
 
     def __init__(self, facts: Iterable[str]):
         """
@@ -69,6 +77,8 @@ class Office365CardFormatter(TeamsCardsFormatter):
                     "facts": self._build_facts_list(record)
                 }
             ],
+            # Fallback to INFO color if needed
+            "themeColor": self._color_map[record.levelname],
             "text": record.getMessage()
         })
 
