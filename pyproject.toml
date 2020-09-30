@@ -1,11 +1,12 @@
 [tool.poetry]
 name = "teams-logger"
-version = "0.3.0"
+version = "0.3.1"
 description = "Microsoft Teams logging handler for Python"
 authors = ["Anes Foufa <anes.foufa@upply.com>"]
 readme = "README.rst"
 homepage = "https://github.com/AnesFoufa/python-teams-logger"
-
+license = "MIT"
+classifiers = ["Topic :: System :: Logging", "Topic :: Communications :: Chat"]
 [tool.poetry.dependencies]
 python = "^3.5"
 requests = "^2.24.0"
