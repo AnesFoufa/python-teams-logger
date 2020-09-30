@@ -75,8 +75,8 @@ class Office365CardFormatter(TeamsCardsFormatter):
                     "facts": self._build_facts_list(record)
                 }
             ],
-            # Fallback to INFO color if needed
-            "themeColor": self._color_map.get(record.levelname, "INFO"),
+            # Fallback to no color if any issue
+            "themeColor": self._color_map.get(record.levelname, ""),
             "text": record.getMessage()
         })
 
