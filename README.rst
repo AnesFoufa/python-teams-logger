@@ -16,7 +16,7 @@ Simple
 .. code-block:: python
 
   import logging
-  from teams_handler import TeamsHandler
+  from teams_logger import TeamsHandler
 
   th = TeamsHandler(url='YOUR_WEB_HOOK_URL', level=logging.INFO)
   logging.basicConfig(handlers=[th])
@@ -28,7 +28,7 @@ Using Card Formatter
 .. code-block:: python
 
   import logging
-  from teams_handler import TeamsHandler, Office365CardFormatter
+  from teams_logger import TeamsHandler, Office365CardFormatter
 
   logger = logging.getLogger(__name__)
   logger.setLevel(logging.DEBUG)
