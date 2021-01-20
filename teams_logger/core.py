@@ -3,6 +3,7 @@ import queue
 from collections import defaultdict
 from logging import Handler, LogRecord, NOTSET, Formatter
 from logging.handlers import QueueHandler, QueueListener
+from traceback import format_exception
 from typing import Iterable
 
 import requests
@@ -16,6 +17,7 @@ class TeamsCardsFormatter(Formatter):
     This class is the base class for cards formatters.
     https://docs.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/what-are-cards
     """
+
     def format(self, record: LogRecord) -> str:
         raise NotImplementedError()
 
@@ -27,6 +29,7 @@ class TeamsHandler(Handler):
     This handler blocks operation. Use non-blocking NBTeamsHandler for less
     impact on your application performance.
     """
+
     def __init__(self, url, level=NOTSET):
         """
         :param url: Microsoft Teams incoming webhook url.
@@ -81,11 +84,11 @@ class Office365CardFormatter(TeamsCardsFormatter):
     _facts = {"name", "levelname", "levelno", "lineno"}
     _color_map = defaultdict(lambda: "#008000", {
         "DEBUG": "#0000FF",  # blue
-        "INFO": "#008000",    # green
+        "INFO": "#008000",  # green
         "WARNING": "#FFA500",  # orange
-        "ERROR": "#FF0000",   # red
+        "ERROR": "#FF0000",  # red
         "CRITICAL": "#8B0000",  # darkred
-     })
+    })
 
     def __init__(self, facts: Iterable[str]):
         """
@@ -95,9 +98,18 @@ class Office365CardFormatter(TeamsCardsFormatter):
         super().__init__()
 
     def format(self, record: LogRecord) -> str:
+        message = record.getMessage()
+        if record.exc_info:
+            etype, value, tb = record.exc_info
+            message += '\n' * 2
+            message += '<code>'
+            message += ''.join(format_exception(etype, value, tb))
+            message += '</code>'
         return json.dumps({
             "@context": "https://schema.org/extensions",
             "@type": "MessageCard",
+            "title": f"{record.levelname.title()} in {record.module}",
+            "summary": f"{record.getMessage()}",
             "sections": [
                 {
                     "facts": self._build_facts_list(record)
@@ -105,7 +117,7 @@ class Office365CardFormatter(TeamsCardsFormatter):
             ],
             # Fallback to INFO color if needed
             "themeColor": self._color_map[record.levelname],
-            "text": record.getMessage()
+            "text": message,
         })
 
     def _build_facts_list(self, record: LogRecord):

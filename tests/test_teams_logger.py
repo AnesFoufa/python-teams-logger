@@ -10,31 +10,49 @@ from teams_logger import TeamsHandler, TeamsQueueHandler, Office365CardFormatter
 
 
 class TestOffice365CardFormatter(unittest.TestCase):
-    log_record = LogRecord(name="logger", level=INFO, pathname=__name__, lineno=1, msg="hello %s",
-                           args=("world",), exc_info=None)
     facts_parameter = ["name"]
     expected_facts_in_message_card = [{
         "name": "name",
         "value": "logger"
     }]
-    expected_text_in_message_card = "hello world"
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.expected_formatted_message_card = {
-            "@context": "https://schema.org/extensions",
-            "@type": "MessageCard",
-            "sections": [{
-                "facts": cls.expected_facts_in_message_card
-            }],
-            "text": cls.expected_text_in_message_card,
-            "themeColor": "#008000"
-        }
+
         cls.formatter = Office365CardFormatter(facts=cls.facts_parameter)
 
     def test_format(self):
-        formatted_message_card = self.formatter.format(self.log_record)
-        self.assert_cards_equal(self.expected_formatted_message_card, json.loads(formatted_message_card))
+        log_record = LogRecord(
+            name="logger", level=INFO,
+            pathname=__name__, lineno=1, msg="hello %s",
+            args=("world",), exc_info=None)
+
+        expected_formatted_message_card = {
+            "@context": "https://schema.org/extensions",
+            "@type": "MessageCard",
+            "sections": [{
+                "facts": self.expected_facts_in_message_card
+            }],
+            "summary": "hello world",
+            "text": "hello world",
+            "title": "Info in test_teams_logger",
+            "themeColor": "#008000"
+        }
+
+        formatted_message_card = self.formatter.format(log_record)
+        self.assert_cards_equal(expected_formatted_message_card,
+                                json.loads(formatted_message_card))
+
+    def test_tb_format(self):
+        """
+        https://stackoverflow.com/questions/19248784/faking-a-traceback-in-python
+        https://docs.microsoft.com/en-us/python/api/azureml-automl-core/azureml.automl.core.shared.fake_traceback?view=azure-ml-py
+        """
+        log_record = LogRecord(
+            name="logger", level=INFO,
+            pathname=__name__, lineno=1, msg="hello %s",
+            args=("world",), exc_info=None)
+
 
     def assert_cards_equal(self, expected_card, actual_card):
         """
