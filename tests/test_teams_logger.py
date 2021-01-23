@@ -9,6 +9,51 @@ from logging.config import dictConfig
 from teams_logger import TeamsHandler, TeamsQueueHandler, Office365CardFormatter
 
 
+class FakeCode(object):
+    def __init__(self, co_filename, co_name):
+        self.co_filename = co_filename
+        self.co_name = co_name
+
+
+class FakeFrame(object):
+    def __init__(self, f_code, f_globals):
+        self.f_code = f_code
+        self.f_globals = f_globals
+
+
+class FakeTraceback(object):
+    def __init__(self, frames, line_nums):
+        if len(frames) != len(line_nums):
+            raise ValueError("Ya messed up!")
+        self._frames = frames
+        self._line_nums = line_nums
+        self.tb_frame = frames[0]
+        self.tb_lineno = line_nums[0]
+
+    @property
+    def tb_next(self):
+        if len(self._frames) > 1:
+            return FakeTraceback(self._frames[1:], self._line_nums[1:])
+
+
+class FakeException(Exception):
+    def __init__(self, *args, **kwargs):
+        self._tb = None
+        super().__init__(*args, **kwargs)
+
+    @property
+    def __traceback__(self):
+        return self._tb
+
+    @__traceback__.setter
+    def __traceback__(self, value):
+        self._tb = value
+
+    def with_traceback(self, value):
+        self._tb = value
+        return self
+
+
 class TestOffice365CardFormatter(unittest.TestCase):
     facts_parameter = ["name"]
     expected_facts_in_message_card = [{
@@ -18,7 +63,6 @@ class TestOffice365CardFormatter(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-
         cls.formatter = Office365CardFormatter(facts=cls.facts_parameter)
 
     def test_format(self):
@@ -48,13 +92,38 @@ class TestOffice365CardFormatter(unittest.TestCase):
         https://stackoverflow.com/questions/19248784/faking-a-traceback-in-python
         https://docs.microsoft.com/en-us/python/api/azureml-automl-core/azureml.automl.core.shared.fake_traceback?view=azure-ml-py
         https://github.com/elifiner/pydump/blob/master/pydump.py
+        poetry add --dev pydump
         pip install pydump ?
         """
+        code1 = FakeCode("made_up_filename.py", "non_existent_function")
+        code2 = FakeCode("another_non_existent_file.py", "another_non_existent_method")
+        frame1 = FakeFrame(code1, {})
+        frame2 = FakeFrame(code2, {})
+        tb = FakeTraceback([frame1, frame2], [1, 3])
+        exc_info = FakeException, None, tb
+
         log_record = LogRecord(
             name="logger", level=INFO,
             pathname=__name__, lineno=1, msg="hello %s",
-            args=("world",), exc_info=None)
+            args=("world",), exc_info=exc_info)
 
+        formatted_message_card = self.formatter.format(log_record)
+
+        expected = {
+            "@context": "https://schema.org/extensions",
+            "@type": "MessageCard",
+            "title": "Info in test_teams_logger",
+            "summary": "hello world",
+            "sections": [{"facts": self.expected_facts_in_message_card}],
+            "themeColor": "#008000",
+            "text": "hello world\n\n"
+                    "<code>Traceback (most recent call last):\n"
+                    "  File \"made_up_filename.py\", line 1, in non_existent_function\n"
+                    "  File \"another_non_existent_file.py\", line 3, in another_non_existent_method\nNoneType: None\n"
+                    "</code>"
+        }
+        self.assert_cards_equal(expected,
+                                json.loads(formatted_message_card))
 
     def assert_cards_equal(self, expected_card, actual_card):
         """
