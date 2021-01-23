@@ -3,7 +3,7 @@ import json
 import sys
 import time
 import unittest.mock
-from logging import Handler, INFO, ERROR, WARNING, getLogger, LogRecord, shutdown
+from logging import Handler, INFO, WARNING, getLogger, LogRecord, shutdown
 from logging.config import dictConfig
 
 from teams_logger import TeamsHandler, TeamsQueueHandler, Office365CardFormatter
@@ -79,7 +79,7 @@ class TestOffice365CardFormatter(unittest.TestCase):
             }],
             "summary": "hello world",
             "text": "hello world",
-            "title": "Info in test_teams_logger",
+            "title": "Info in __main__",
             "themeColor": "#008000"
         }
 
@@ -103,7 +103,7 @@ class TestOffice365CardFormatter(unittest.TestCase):
         exc_info = FakeException, None, tb
 
         log_record = LogRecord(
-            name="logger", level=ERROR,
+            name="logger", level=INFO,
             pathname=__name__, lineno=1, msg="hello %s",
             args=("world",), exc_info=exc_info)
 
@@ -112,7 +112,7 @@ class TestOffice365CardFormatter(unittest.TestCase):
         expected = {
             "@context": "https://schema.org/extensions",
             "@type": "MessageCard",
-            "title": "Error in test_teams_logger",
+            "title": "Info in __main__",
             "summary": "hello world",
             "sections": [{"facts": self.expected_facts_in_message_card}],
             "themeColor": "#008000",
