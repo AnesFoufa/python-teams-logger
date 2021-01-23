@@ -47,6 +47,8 @@ class TestOffice365CardFormatter(unittest.TestCase):
         """
         https://stackoverflow.com/questions/19248784/faking-a-traceback-in-python
         https://docs.microsoft.com/en-us/python/api/azureml-automl-core/azureml.automl.core.shared.fake_traceback?view=azure-ml-py
+        https://github.com/elifiner/pydump/blob/master/pydump.py
+        pip install pydump ?
         """
         log_record = LogRecord(
             name="logger", level=INFO,
