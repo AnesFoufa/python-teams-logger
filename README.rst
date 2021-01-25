@@ -54,7 +54,10 @@ Simple configuration and Card Formatter
   logger.error('error message')
   logger.critical('critical message')
 
-
+  try:
+      2/0
+  except ZeroDivisionError as e:
+      logger.error('Oops !', exc_info=True)
 
 Dictionary configuration and Card Formatter
 '''''''''''''''''''''''''''''''''''''''''''
