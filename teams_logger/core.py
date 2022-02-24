@@ -69,9 +69,13 @@ class TeamsQueueHandler(QueueHandler):
         self._log_queue = queue.Queue(-1)
         super().__init__(self._log_queue)
 
-        teams_handler = TeamsHandler(url, level)
-        teams_log_listener = QueueListener(self._log_queue, teams_handler)
+        self._teams_handler = TeamsHandler(url, level)
+        teams_log_listener = QueueListener(self._log_queue, self._teams_handler)
         teams_log_listener.start()
+
+    def setFormatter(self, fmt):
+        self._teams_handler.setFormatter(fmt)
+        super().setFormatter(fmt)
 
 
 class Office365CardFormatter(TeamsCardsFormatter):
