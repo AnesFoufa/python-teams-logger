@@ -3,10 +3,15 @@ import json
 import sys
 import time
 import unittest.mock
-from logging import Handler, INFO, WARNING, getLogger, LogRecord, shutdown
+from logging import INFO, WARNING, Handler, LogRecord, getLogger, shutdown
 from logging.config import dictConfig
 
-from teams_logger import TeamsHandler, TeamsQueueHandler, Office365CardFormatter
+from teams_logger import (
+    Office365CardFormatter,
+    TeamsAdaptiveCardFormatter,
+    TeamsHandler,
+    TeamsQueueHandler,
+)
 
 
 class FakeCode(object):
@@ -56,10 +61,7 @@ class FakeException(Exception):
 
 class TestOffice365CardFormatter(unittest.TestCase):
     facts_parameter = ["name"]
-    expected_facts_in_message_card = [{
-        "name": "name",
-        "value": "logger"
-    }]
+    expected_facts_in_message_card = [{"name": "name", "value": "logger"}]
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -67,25 +69,29 @@ class TestOffice365CardFormatter(unittest.TestCase):
 
     def test_format(self):
         log_record = LogRecord(
-            name="logger", level=INFO,
-            pathname=__name__, lineno=1, msg="hello %s",
-            args=("world",), exc_info=None)
+            name="logger",
+            level=INFO,
+            pathname=__name__,
+            lineno=1,
+            msg="hello %s",
+            args=("world",),
+            exc_info=None,
+        )
 
         expected_formatted_message_card = {
             "@context": "https://schema.org/extensions",
             "@type": "MessageCard",
-            "sections": [{
-                "facts": self.expected_facts_in_message_card
-            }],
+            "sections": [{"facts": self.expected_facts_in_message_card}],
             "summary": "hello world",
             "text": "hello world",
             "title": "Info in __main__",
-            "themeColor": "#008000"
+            "themeColor": "#008000",
         }
 
         formatted_message_card = self.formatter.format(log_record)
-        self.assert_cards_equal(expected_formatted_message_card,
-                                json.loads(formatted_message_card))
+        self.assert_cards_equal(
+            expected_formatted_message_card, json.loads(formatted_message_card)
+        )
 
     def test_tb_format(self):
         """
@@ -103,9 +109,14 @@ class TestOffice365CardFormatter(unittest.TestCase):
         exc_info = FakeException, None, tb
 
         log_record = LogRecord(
-            name="logger", level=INFO,
-            pathname=__name__, lineno=1, msg="hello %s",
-            args=("world",), exc_info=exc_info)
+            name="logger",
+            level=INFO,
+            pathname=__name__,
+            lineno=1,
+            msg="hello %s",
+            args=("world",),
+            exc_info=exc_info,
+        )
 
         formatted_message_card = self.formatter.format(log_record)
 
@@ -117,13 +128,12 @@ class TestOffice365CardFormatter(unittest.TestCase):
             "sections": [{"facts": self.expected_facts_in_message_card}],
             "themeColor": "#008000",
             "text": "hello world\n\n"
-                    "<code>Traceback (most recent call last):\n"
-                    "  File \"made_up_filename.py\", line 1, in non_existent_function\n"
-                    "  File \"another_non_existent_file.py\", line 3, in another_non_existent_method\nNoneType: None\n"
-                    "</code>"
+            "<code>Traceback (most recent call last):\n"
+            '  File "made_up_filename.py", line 1, in non_existent_function\n'
+            '  File "another_non_existent_file.py", line 3, in another_non_existent_method\nNoneType: None\n'
+            "</code>",
         }
-        self.assert_cards_equal(expected,
-                                json.loads(formatted_message_card))
+        self.assert_cards_equal(expected, json.loads(formatted_message_card))
 
     def assert_cards_equal(self, expected_card, actual_card):
         """
@@ -138,20 +148,165 @@ class TestOffice365CardFormatter(unittest.TestCase):
 
 class TestOffice365CardFormatter2(TestOffice365CardFormatter):
     facts_parameter = ["name", "levelname", "lineno"]
-    expected_facts_in_message_card = [{
-        "name": "name",
-        "value": "logger"
-    }, {
-        "name": "lineno",
-        "value": 1
-    }, {
-        "name": "levelname",
-        "value": "INFO"
-    }]
+    expected_facts_in_message_card = [
+        {"name": "name", "value": "logger"},
+        {"name": "lineno", "value": 1},
+        {"name": "levelname", "value": "INFO"},
+    ]
+
+
+class TestTeamsAdaptiveCardFormatter(unittest.TestCase):
+    facts_parameter = ["name"]
+    expected_facts_in_message_card = [{"title": "name", "value": "logger"}]
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.formatter = TeamsAdaptiveCardFormatter(facts=cls.facts_parameter)
+
+    def test_format(self):
+        log_record = LogRecord(
+            name="logger",
+            level=INFO,
+            pathname=__name__,
+            lineno=1,
+            msg="hello %s",
+            args=("world",),
+            exc_info=None,
+        )
+
+        expected_formatted_message_card = {
+            "type": "message",
+            "attachments": [
+                {
+                    "contentType": "application/vnd.microsoft.card.adaptive",
+                    "contentUrl": None,
+                    "content": {
+                        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                        "version": "1.2",
+                        "type": "AdaptiveCard",
+                        "body": [
+                            {
+                                "type": "TextBlock",
+                                "size": "Medium",
+                                "weight": "Bolder",
+                                "text": "Info in __main__",
+                                "color": "Good",
+                                "horizontalAlignment": "Center",
+                            },
+                            {
+                                "type": "TextBlock",
+                                "text": "hello world",
+                            },
+                            {
+                                "type": "FactSet",
+                                "facts": self.expected_facts_in_message_card,
+                            },
+                            {
+                                "type": "RichTextBlock",
+                                "inlines": [{"text": "hello world", "type": "TextRun"}],
+                            },
+                        ],
+                    },
+                }
+            ],
+        }
+
+        formatted_message_card = self.formatter.format(log_record)
+
+        self.assert_cards_equal(
+            expected_formatted_message_card, json.loads(formatted_message_card)
+        )
+
+    def test_tb_format(self):
+        """
+        https://stackoverflow.com/questions/19248784/faking-a-traceback-in-python
+        https://docs.microsoft.com/en-us/python/api/azureml-automl-core/azureml.automl.core.shared.fake_traceback?view=azure-ml-py
+        https://github.com/elifiner/pydump/blob/master/pydump.py
+        poetry add --dev pydump
+        pip install pydump ?
+        """
+        code1 = FakeCode("made_up_filename.py", "non_existent_function")
+        code2 = FakeCode("another_non_existent_file.py", "another_non_existent_method")
+        frame1 = FakeFrame(code1, {})
+        frame2 = FakeFrame(code2, {})
+        tb = FakeTraceback([frame1, frame2], [1, 3])
+        exc_info = FakeException, None, tb
+
+        log_record = LogRecord(
+            name="logger",
+            level=INFO,
+            pathname=__name__,
+            lineno=1,
+            msg="hello %s",
+            args=("world",),
+            exc_info=exc_info,
+        )
+
+        formatted_message_card = self.formatter.format(log_record)
+
+        expected = {
+            "type": "message",
+            "attachments": [
+                {
+                    "contentType": "application/vnd.microsoft.card.adaptive",
+                    "contentUrl": None,
+                    "content": {
+                        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                        "version": "1.2",
+                        "type": "AdaptiveCard",
+                        "body": [
+                            {
+                                "type": "TextBlock",
+                                "size": "Medium",
+                                "weight": "Bolder",
+                                "text": "Info in __main__",
+                                "color": "Good",
+                                "horizontalAlignment": "Center",
+                            },
+                            {
+                                "type": "TextBlock",
+                                "text": "hello world",
+                            },
+                            {
+                                "type": "FactSet",
+                                "facts": self.expected_facts_in_message_card,
+                            },
+                            {
+                                "type": "RichTextBlock",
+                                "inlines": [
+                                    {
+                                        "type": "TextRun",
+                                        "text": "hello world\n\n"
+                                        "<code>Traceback (most recent call last):\n"
+                                        '  File "made_up_filename.py", line 1, in non_existent_function\n'
+                                        '  File "another_non_existent_file.py", line 3, in another_non_existent_method\nNoneType: None\n'
+                                        "</code>",
+                                    }
+                                ],
+                            },
+                        ],
+                    },
+                }
+            ],
+        }
+
+        self.assert_cards_equal(expected, json.loads(formatted_message_card))
+
+    def assert_cards_equal(self, expected_card, actual_card):
+        """
+        Reorder the facts before sorting the cards.
+        """
+        expected_facts: list = expected_card["attachments"][0]["content"]["body"][2][
+            "facts"
+        ]
+        expected_facts.sort(key=lambda x: x["title"])
+        actual_facts = actual_card["attachments"][0]["content"]["body"][2]["facts"]
+        actual_facts.sort(key=lambda x: x["title"])
+        self.assertEqual(expected_card, actual_card)
 
 
 class TestTeamsHandler(unittest.TestCase):
-    url = 'https://outlook.office.com/webhook/fake_id/IncomingWebhook/fake_id'
+    url = "https://outlook.office.com/webhook/fake_id/IncomingWebhook/fake_id"
     level = INFO
     log_text = "bla bla %s"
     log_parameter = "foo"
@@ -161,9 +316,7 @@ class TestTeamsHandler(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         log_message = cls.log_text % cls.log_parameter
-        cls.expected_payload_with_default_formatter = json.dumps({
-            "text": log_message
-        })
+        cls.expected_payload_with_default_formatter = json.dumps({"text": log_message})
 
     def setUp(self) -> None:
         self.teams_handler = TeamsHandler(url=self.url, level=self.level)
@@ -173,19 +326,19 @@ class TestTeamsHandler(unittest.TestCase):
         self.logger.handlers = [self.teams_handler]
 
         self.logging_dict = {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'handlers': {
-                'msteams': {
-                    'level': WARNING,
-                    'class': 'teams_logger.TeamsHandler',
-                    'url': self.url,
+            "version": 1,
+            "disable_existing_loggers": False,
+            "handlers": {
+                "msteams": {
+                    "level": WARNING,
+                    "class": "teams_logger.TeamsHandler",
+                    "url": self.url,
                 },
             },
-            'loggers': {
+            "loggers": {
                 __name__: {
-                    'handlers': ['msteams'],
-                    'level': self.level,
+                    "handlers": ["msteams"],
+                    "level": self.level,
                 }
             },
         }
@@ -201,8 +354,11 @@ class TestTeamsHandler(unittest.TestCase):
     @unittest.mock.patch("requests.post")
     def test_emit_with_default_formatter(self, mock_requests):
         self.logger.log(self.log_level, self.log_text, self.log_parameter)
-        mock_requests.assert_called_with(url=self.url, headers={"Content-Type": "application/json"},
-                                         data=self.expected_payload_with_default_formatter)
+        mock_requests.assert_called_with(
+            url=self.url,
+            headers={"Content-Type": "application/json"},
+            data=self.expected_payload_with_default_formatter,
+        )
 
     @unittest.mock.patch("requests.post")
     def test_emit_exception(self, mock_requests):
@@ -212,18 +368,24 @@ class TestTeamsHandler(unittest.TestCase):
             self.logger.log(self.log_level, self.log_text, self.log_parameter)
         except ValueError:
             self.fail(
-                "An exception was raised; it should have been suppressed by the logging handler")
+                "An exception was raised; it should have been suppressed by the logging handler"
+            )
         finally:
             sys.stderr = sys.__stderr__  # restore stderr
 
     @unittest.mock.patch("requests.post")
     def test_emit_with_teams_message_card_formatter(self, mock_requests):
         teams_message_card_formatter = Office365CardFormatter(facts=[])
-        teams_message_card_formatter.format = unittest.mock.MagicMock(return_value=self.fake_message_card)
+        teams_message_card_formatter.format = unittest.mock.MagicMock(
+            return_value=self.fake_message_card
+        )
         self.teams_handler.setFormatter(teams_message_card_formatter)
         self.logger.log(self.log_level, self.log_text, self.log_parameter)
-        mock_requests.assert_called_with(url=self.url, headers={"Content-Type": "application/json"},
-                                         data=self.fake_message_card)
+        mock_requests.assert_called_with(
+            url=self.url,
+            headers={"Content-Type": "application/json"},
+            data=self.fake_message_card,
+        )
 
     def test_initializing_logger_from_dict(self):
         dictConfig(self.logging_dict)
@@ -237,16 +399,17 @@ class TestTeamsHandler(unittest.TestCase):
 
     @unittest.mock.patch("requests.post")
     def test_dict_level_handling(self, mock_requests):
-        """ Test correctly handling logging levels when initialized from dict """
+        """Test correctly handling logging levels when initialized from dict"""
         dictConfig(self.logging_dict)
         self.logger = getLogger(__name__)
 
         # Logging to same level (WARNING) should be handled
         self.logger.log(WARNING, self.log_text, self.log_parameter)
-        mock_requests.assert_called_with(url=self.url,
-                                         headers={
-                                             "Content-Type": "application/json"},
-                                         data=self.expected_payload_with_default_formatter)
+        mock_requests.assert_called_with(
+            url=self.url,
+            headers={"Content-Type": "application/json"},
+            data=self.expected_payload_with_default_formatter,
+        )
 
         # Logging to lower level (INFO) should *not* be handled
         mock_requests.reset_mock()
@@ -255,7 +418,7 @@ class TestTeamsHandler(unittest.TestCase):
 
 
 class TestTeamsQueueHandler(unittest.TestCase):
-    url = 'https://outlook.office.com/webhook/fake_id/IncomingWebhook/fake_id'
+    url = "https://outlook.office.com/webhook/fake_id/IncomingWebhook/fake_id"
     level = INFO
     log_text = "bla bla %s"
     log_parameter = "foo"
@@ -264,9 +427,7 @@ class TestTeamsQueueHandler(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         log_message = cls.log_text % cls.log_parameter
-        cls.expected_payload_with_default_formatter = json.dumps({
-            "text": log_message
-        })
+        cls.expected_payload_with_default_formatter = json.dumps({"text": log_message})
 
     def setUp(self) -> None:
         self.handler = TeamsQueueHandler(url=self.url)
@@ -296,9 +457,12 @@ class TestTeamsQueueHandler(unittest.TestCase):
             count += 1
             if count >= 10:
                 self.fail("Log queue not processed in reasonable time")
-        mock_requests.assert_called_with(url=self.url, headers={"Content-Type": "application/json"},
-                                         data=self.expected_payload_with_default_formatter)
+        mock_requests.assert_called_with(
+            url=self.url,
+            headers={"Content-Type": "application/json"},
+            data=self.expected_payload_with_default_formatter,
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

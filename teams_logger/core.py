@@ -1,15 +1,20 @@
 import json
 import queue
 from collections import defaultdict
-from logging import Handler, LogRecord, NOTSET, Formatter
+from logging import NOTSET, Formatter, Handler, LogRecord
 from logging.handlers import QueueHandler, QueueListener
 from traceback import format_exception
 from typing import Iterable
 
 import requests
 
-__all__ = ["TeamsHandler", "TeamsQueueHandler",
-           "Office365CardFormatter", "TeamsCardsFormatter"]
+__all__ = [
+    "TeamsHandler",
+    "TeamsQueueHandler",
+    "Office365CardFormatter",
+    "TeamsCardsFormatter",
+    "TeamsAdaptiveCardFormatter",
+]
 
 
 class TeamsCardsFormatter(Formatter):
@@ -47,9 +52,9 @@ class TeamsHandler(Handler):
     def emit(self, record: LogRecord):
         try:
             data = self.format(record)
-            requests.post(url=self.url,
-                          headers={"Content-Type": "application/json"},
-                          data=data)
+            requests.post(
+                url=self.url, headers={"Content-Type": "application/json"}, data=data
+            )
         except Exception:
             self.handleError(record)
 
@@ -85,14 +90,18 @@ class Office365CardFormatter(TeamsCardsFormatter):
     https://docs.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/cards/cards-reference#office-365-connector-card
     In addition to the message, each log record attribute (levelname, lineno...etc) can be displayed as facts.
     """
+
     _facts = {"name", "levelname", "levelno", "lineno"}
-    _color_map = defaultdict(lambda: "#008000", {
-        "DEBUG": "#0000FF",  # blue
-        "INFO": "#008000",  # green
-        "WARNING": "#FFA500",  # orange
-        "ERROR": "#FF0000",  # red
-        "CRITICAL": "#8B0000",  # darkred
-    })
+    _color_map = defaultdict(
+        lambda: "#008000",
+        {
+            "DEBUG": "#0000FF",  # blue
+            "INFO": "#008000",  # green
+            "WARNING": "#FFA500",  # orange
+            "ERROR": "#FF0000",  # red
+            "CRITICAL": "#8B0000",  # darkred
+        },
+    )
 
     def __init__(self, facts: Iterable[str]):
         """
@@ -105,27 +114,100 @@ class Office365CardFormatter(TeamsCardsFormatter):
         message = record.getMessage()
         if record.exc_info:
             etype, value, tb = record.exc_info
-            message += '\n' * 2
-            message += '<code>'
-            message += ''.join(format_exception(etype, value, tb))
-            message += '</code>'
-        return json.dumps({
-            "@context": "https://schema.org/extensions",
-            "@type": "MessageCard",
-            "title": f"{record.levelname.title()} in {record.module}",
-            "summary": f"{record.getMessage()}",
-            "sections": [
-                {
-                    "facts": self._build_facts_list(record)
-                }
-            ],
-            # Fallback to INFO color if needed
-            "themeColor": self._color_map[record.levelname],
-            "text": message,
-        })
+            message += "\n" * 2
+            message += "<code>"
+            message += "".join(format_exception(etype, value, tb))
+            message += "</code>"
+        return json.dumps(
+            {
+                "@context": "https://schema.org/extensions",
+                "@type": "MessageCard",
+                "title": f"{record.levelname.title()} in {record.module}",
+                "summary": f"{record.getMessage()}",
+                "sections": [{"facts": self._build_facts_list(record)}],
+                # Fallback to INFO color if needed
+                "themeColor": self._color_map[record.levelname],
+                "text": message,
+            }
+        )
 
     def _build_facts_list(self, record: LogRecord):
-        return [{
-            "name": fact,
-            "value": getattr(record, fact)
-        } for fact in self.facts]
+        return [{"name": fact, "value": getattr(record, fact)} for fact in self.facts]
+
+
+class TeamsAdaptiveCardFormatter(TeamsCardsFormatter):
+    """
+    This formatter formats logs records as a simple adaptive card.
+    The connector card documentation is displayed in the link below:
+    https://learn.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/cards/design-effective-cards
+    In addition to the message, each log record attribute (levelname, lineno...etc) can be displayed as facts.
+    """
+
+    _facts = {"name", "levelname", "levelno", "lineno"}
+    _color_map = defaultdict(
+        lambda: "#008000",
+        {
+            "DEBUG": "Accent",  # blue
+            "INFO": "Good",  # green
+            "WARNING": "Warning",  # orange
+            "ERROR": "Attention",  # red
+            "CRITICAL": "Dark",  # darkred
+        },
+    )
+
+    def __init__(self, facts: Iterable[str]):
+        """
+        :param facts:  LogRecord attributes to be displayed as facts in the message's card.
+        """
+        self.facts = self._facts.intersection(set(facts))
+        super().__init__()
+
+    def format(self, record: LogRecord) -> str:
+        message = record.getMessage()
+        if record.exc_info:
+            etype, value, tb = record.exc_info
+            message += "\n" * 2
+            message += "<code>"
+            message += "".join(format_exception(etype, value, tb))
+            message += "</code>"
+        return json.dumps(
+            {
+                "type": "message",
+                "attachments": [
+                    {
+                        "contentType": "application/vnd.microsoft.card.adaptive",
+                        "contentUrl": None,
+                        "content": {
+                            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                            "version": "1.2",
+                            "type": "AdaptiveCard",
+                            "body": [
+                                {
+                                    "type": "TextBlock",
+                                    "size": "Medium",
+                                    "weight": "Bolder",
+                                    "text": f"{record.levelname.title()} in {record.module}",
+                                    "color": self._color_map[record.levelname],
+                                    "horizontalAlignment": "Center",
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": f"{record.getMessage()}",
+                                },
+                                {
+                                    "type": "FactSet",
+                                    "facts": self._build_facts_list(record),
+                                },
+                                {
+                                    "type": "RichTextBlock",
+                                    "inlines": [{"type": "TextRun", "text": message}],
+                                },
+                            ],
+                        },
+                    }
+                ],
+            }
+        )
+
+    def _build_facts_list(self, record: LogRecord):
+        return [{"title": fact, "value": getattr(record, fact)} for fact in self.facts]
