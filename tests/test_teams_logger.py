@@ -19,6 +19,11 @@ class FakeCode(object):
         self.co_filename = co_filename
         self.co_name = co_name
 
+    def co_positions(self):
+        """Return an infinite stream of empty code position tuples."""
+        while True:
+            yield (None, None, None, None)
+
 
 class FakeFrame(object):
     def __init__(self, f_code, f_globals):
@@ -34,6 +39,7 @@ class FakeTraceback(object):
         self._line_nums = line_nums
         self.tb_frame = frames[0]
         self.tb_lineno = line_nums[0]
+        self.tb_lasti = 0
 
     @property
     def tb_next(self):
