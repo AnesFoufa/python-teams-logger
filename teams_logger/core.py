@@ -1,3 +1,5 @@
+"""Core logging handlers and formatters for Microsoft Teams integration."""
+
 import json
 import queue
 from collections import defaultdict
@@ -53,9 +55,12 @@ class TeamsHandler(Handler):
         try:
             data = self.format(record)
             requests.post(
-                url=self.url, headers={"Content-Type": "application/json"}, data=data
+                url=self.url,
+                headers={"Content-Type": "application/json"},
+                data=data,
+                timeout=3,
             )
-        except Exception:
+        except requests.RequestException:
             self.handleError(record)
 
 
@@ -75,7 +80,9 @@ class TeamsQueueHandler(QueueHandler):
         super().__init__(self._log_queue)
 
         self._teams_handler = TeamsHandler(url, level)
-        teams_log_listener = QueueListener(self._log_queue, self._teams_handler)
+        teams_log_listener = QueueListener(
+            self._log_queue, self._teams_handler
+        )
         teams_log_listener.start()
 
     def setFormatter(self, fmt):
@@ -85,10 +92,11 @@ class TeamsQueueHandler(QueueHandler):
 
 class Office365CardFormatter(TeamsCardsFormatter):
     """
-    This formatter formats logs records as a simple office 365 connector card.
-    The connector card documentation is displayed in the link below:
+    This formatter formats log records as a simple Office 365 connector card.
+    The connector card documentation is at
     https://docs.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/cards/cards-reference#office-365-connector-card
-    In addition to the message, each log record attribute (levelname, lineno...etc) can be displayed as facts.
+    In addition to the message, each log record attribute (levelname,
+    lineno...etc) can be displayed as facts.
     """
 
     _facts = {"name", "levelname", "levelno", "lineno"}
@@ -105,7 +113,7 @@ class Office365CardFormatter(TeamsCardsFormatter):
 
     def __init__(self, facts: Iterable[str]):
         """
-        :param facts:  LogRecord attributes to be displayed as facts in the message's card.
+        :param facts: LogRecord attributes to display as facts in the card.
         """
         self.facts = self._facts.intersection(set(facts))
         super().__init__()
@@ -132,15 +140,19 @@ class Office365CardFormatter(TeamsCardsFormatter):
         )
 
     def _build_facts_list(self, record: LogRecord):
-        return [{"name": fact, "value": getattr(record, fact)} for fact in self.facts]
+        return [
+            {"name": fact, "value": getattr(record, fact)}
+            for fact in self.facts
+        ]
 
 
 class TeamsAdaptiveCardFormatter(TeamsCardsFormatter):
     """
-    This formatter formats logs records as a simple adaptive card.
-    The connector card documentation is displayed in the link below:
+    This formatter formats log records as a simple adaptive card.
+    The card documentation is at
     https://learn.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/cards/design-effective-cards
-    In addition to the message, each log record attribute (levelname, lineno...etc) can be displayed as facts.
+    In addition to the message, each log record attribute (levelname,
+    lineno...etc) can be displayed as facts.
     """
 
     _facts = {"name", "levelname", "levelno", "lineno"}
@@ -157,7 +169,7 @@ class TeamsAdaptiveCardFormatter(TeamsCardsFormatter):
 
     def __init__(self, facts: Iterable[str]):
         """
-        :param facts:  LogRecord attributes to be displayed as facts in the message's card.
+        :param facts: LogRecord attributes to display as facts in the card.
         """
         self.facts = self._facts.intersection(set(facts))
         super().__init__()
@@ -175,10 +187,15 @@ class TeamsAdaptiveCardFormatter(TeamsCardsFormatter):
                 "type": "message",
                 "attachments": [
                     {
-                        "contentType": "application/vnd.microsoft.card.adaptive",
+                        "contentType": (
+                            "application/vnd.microsoft.card.adaptive"
+                        ),
                         "contentUrl": None,
                         "content": {
-                            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                            "$schema": (
+                                "http://adaptivecards.io/schemas/"
+                                "adaptive-card.json"
+                            ),
                             "version": "1.2",
                             "type": "AdaptiveCard",
                             "body": [
@@ -186,7 +203,10 @@ class TeamsAdaptiveCardFormatter(TeamsCardsFormatter):
                                     "type": "TextBlock",
                                     "size": "Medium",
                                     "weight": "Bolder",
-                                    "text": f"{record.levelname.title()} in {record.module}",
+                                    "text": (
+                                        f"{record.levelname.title()} in "
+                                        f"{record.module}"
+                                    ),
                                     "color": self._color_map[record.levelname],
                                     "horizontalAlignment": "Center",
                                 },
@@ -200,7 +220,9 @@ class TeamsAdaptiveCardFormatter(TeamsCardsFormatter):
                                 },
                                 {
                                     "type": "RichTextBlock",
-                                    "inlines": [{"type": "TextRun", "text": message}],
+                                    "inlines": [
+                                        {"type": "TextRun", "text": message}
+                                    ],
                                 },
                             ],
                         },
@@ -210,4 +232,7 @@ class TeamsAdaptiveCardFormatter(TeamsCardsFormatter):
         )
 
     def _build_facts_list(self, record: LogRecord):
-        return [{"title": fact, "value": getattr(record, fact)} for fact in self.facts]
+        return [
+            {"title": fact, "value": getattr(record, fact)}
+            for fact in self.facts
+        ]
