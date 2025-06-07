@@ -71,7 +71,7 @@ Dictionary configuration and Card Formatter
 
   url = 'YOUR_WEB_HOOK_URL'
   logging_dict = {
-      'version': 1, 
+      'version': 1,
       'disable_existing_loggers': False,
       'formatters': {
           'teamscard': {
