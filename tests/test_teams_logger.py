@@ -3,6 +3,8 @@ import json
 import sys
 import time
 import unittest.mock
+
+import requests
 from logging import INFO, WARNING, Handler, LogRecord, getLogger, shutdown
 from logging.config import dictConfig
 
@@ -19,6 +21,11 @@ class FakeCode(object):
         self.co_filename = co_filename
         self.co_name = co_name
 
+    def co_positions(self):
+        """Return an infinite stream of empty code position tuples."""
+        while True:
+            yield (None, None, None, None)
+
 
 class FakeFrame(object):
     def __init__(self, f_code, f_globals):
@@ -34,6 +41,7 @@ class FakeTraceback(object):
         self._line_nums = line_nums
         self.tb_frame = frames[0]
         self.tb_lineno = line_nums[0]
+        self.tb_lasti = 0
 
     @property
     def tb_next(self):
@@ -358,11 +366,12 @@ class TestTeamsHandler(unittest.TestCase):
             url=self.url,
             headers={"Content-Type": "application/json"},
             data=self.expected_payload_with_default_formatter,
+            timeout=3,
         )
 
     @unittest.mock.patch("requests.post")
     def test_emit_exception(self, mock_requests):
-        mock_requests.side_effect = ValueError()
+        mock_requests.side_effect = requests.RequestException()
         sys.stderr = io.StringIO()  # disable output of handleError operation
         try:
             self.logger.log(self.log_level, self.log_text, self.log_parameter)
@@ -385,6 +394,7 @@ class TestTeamsHandler(unittest.TestCase):
             url=self.url,
             headers={"Content-Type": "application/json"},
             data=self.fake_message_card,
+            timeout=3,
         )
 
     def test_initializing_logger_from_dict(self):
@@ -409,6 +419,7 @@ class TestTeamsHandler(unittest.TestCase):
             url=self.url,
             headers={"Content-Type": "application/json"},
             data=self.expected_payload_with_default_formatter,
+            timeout=3,
         )
 
         # Logging to lower level (INFO) should *not* be handled
@@ -461,6 +472,7 @@ class TestTeamsQueueHandler(unittest.TestCase):
             url=self.url,
             headers={"Content-Type": "application/json"},
             data=self.expected_payload_with_default_formatter,
+            timeout=3,
         )
 
 

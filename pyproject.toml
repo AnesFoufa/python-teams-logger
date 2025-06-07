@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "teams-logger"
-version = "0.5.0"
+version = "0.5.1"
 description = "Microsoft Teams logging handler for Python"
 authors = ["Anes Foufa <anes.foufa@upply.com>"]
 readme = "README.rst"
@@ -8,8 +8,8 @@ homepage = "https://github.com/AnesFoufa/python-teams-logger"
 license = "MIT"
 classifiers = ["Topic :: System :: Logging", "Topic :: Communications :: Chat"]
 [tool.poetry.dependencies]
-python = "^3.6"
-requests = "^2.24.0"
+python = "^3.8"
+requests = "^2.32.0"
 
 [tool.poetry.dev-dependencies]
 pydump = "^1.2.0"

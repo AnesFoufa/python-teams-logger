@@ -3,6 +3,8 @@ teams-logger
 
 Python logging handler for Microsoft Teams webhook integration with both simple and dictionary configurations.
 
+This package requires Python 3.8 or newer.
+
 Installation
 ------------
 .. code-block:: bash
