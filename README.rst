@@ -97,3 +97,12 @@ Dictionary configuration and Card Formatter
   logging.config.dictConfig(logging_dict)
   logger = logging.getLogger(__name__)
   logger.info('Info message')
+
+Running tests
+-------------
+To run the test suite, install the package with uv and execute the test file:
+
+.. code-block:: bash
+
+    uv pip install -e .
+    uv run python tests/test_teams_logger.py
