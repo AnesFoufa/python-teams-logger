@@ -1,19 +1,22 @@
-[tool.poetry]
+[project]
 name = "teams-logger"
 version = "0.5.1"
 description = "Microsoft Teams logging handler for Python"
-authors = ["Anes Foufa <anes.foufa@upply.com>"]
 readme = "README.rst"
-homepage = "https://github.com/AnesFoufa/python-teams-logger"
-license = "MIT"
-classifiers = ["Topic :: System :: Logging", "Topic :: Communications :: Chat"]
-[tool.poetry.dependencies]
-python = "^3.8"
-requests = "^2.32.0"
+requires-python = ">=3.8"
+authors = [ { name = "Anes Foufa", email = "anes.foufa@upply.com" } ]
+dependencies = [
+    "requests>=2.32.0"
+]
 
-[tool.poetry.dev-dependencies]
-pydump = "^1.2.0"
+[project.optional-dependencies]
+dev = [
+    "pydump>=1.2.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/AnesFoufa/python-teams-logger"
 
 [build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
